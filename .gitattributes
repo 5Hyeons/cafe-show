@@ -1,0 +1,2 @@
+public/unity/Build/*.data filter=lfs diff=lfs merge=lfs -text
+public/unity/Build/*.wasm filter=lfs diff=lfs merge=lfs -text

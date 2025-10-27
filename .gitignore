@@ -27,8 +27,3 @@ dist-ssr
 .env
 .env.local
 .env.production
-
-# Unity WebGL Build files (large files)
-public/unity/Build/*.data
-public/unity/Build/*.wasm
-public/unity/Build/*.framework.js
