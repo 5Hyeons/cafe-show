@@ -56,7 +56,6 @@ export function LiveKitChat({ onNextScreen }: LiveKitChatProps) {
 
         // Ignore non-transcriptions
         if (!isTranscription) {
-          console.log('[LiveKitChat] Skipping: not a transcription');
           return;
         }
 
@@ -68,15 +67,15 @@ export function LiveKitChat({ onNextScreen }: LiveKitChatProps) {
         // Determine if this is user or agent transcription
         const isUserTranscription = participantId === localParticipant.identity;
 
-        console.log('[LiveKitChat] Transcription received:', {
-          streamId,
-          segmentId,
-          participantIdentity,
-          participantId,
-          localIdentity: localParticipant.identity,
-          isUserTranscription,
-          isFinal,
-        });
+        // Debug: Only log final transcriptions to reduce noise
+        if (isFinal) {
+          console.log('[LiveKitChat] Transcription final:', {
+            segmentId,
+            participantId,
+            isUserTranscription,
+            text: '(will be processed)',
+          });
+        }
 
         // Use segmentId for message ID (same segment = same message)
         const messageId = segmentId || streamId;
@@ -111,7 +110,6 @@ export function LiveKitChat({ onNextScreen }: LiveKitChatProps) {
         }
 
         // Stream ended - always remove "..." indicator
-        console.log('[LiveKitChat] Stream ended for messageId:', messageId, 'isFinal:', isFinal);
         setMessages((prev) => {
           const existingIndex = prev.findIndex(m => m.id === messageId);
           if (existingIndex >= 0) {
@@ -120,7 +118,6 @@ export function LiveKitChat({ onNextScreen }: LiveKitChatProps) {
               ...newMessages[existingIndex],
               message: fullText, // Remove "..." regardless of isFinal
             };
-            console.log('[LiveKitChat] Removed "..." from message:', fullText);
             return newMessages;
           }
           return prev;
@@ -132,7 +129,6 @@ export function LiveKitChat({ onNextScreen }: LiveKitChatProps) {
 
     try {
       room.registerTextStreamHandler('lk.transcription', handleTranscription);
-      console.log('[LiveKitChat] ✓ Transcription handler registered');
     } catch (error) {
       console.error('[LiveKit] Handler registration failed:', error);
     }
@@ -143,10 +139,9 @@ export function LiveKitChat({ onNextScreen }: LiveKitChatProps) {
         // @ts-ignore - unregister method may not be in type definitions
         if (room && room.unregisterTextStreamHandler) {
           room.unregisterTextStreamHandler('lk.transcription');
-          console.log('[LiveKitChat] ✓ Transcription handler unregistered');
         }
       } catch (error) {
-        console.log('[LiveKitChat] No handler to unregister or already unregistered');
+        // Silently ignore unregister errors
       }
     };
   }, [room, localParticipant.identity]);

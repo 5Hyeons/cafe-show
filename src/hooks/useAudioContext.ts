@@ -26,18 +26,12 @@ export function useAudioContext() {
         // We need to resume the global AudioContext if it exists
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
 
-        // Try to find suspended audio contexts
-        // Note: This is a workaround since we can't directly access LiveKit's AudioContext
-        console.log('[useAudioContext] Attempting to resume AudioContext on user interaction...');
-
         // Create a temporary AudioContext to test if we can play audio
         const testContext = new AudioContextClass();
 
         if (testContext.state === 'suspended') {
           await testContext.resume();
-          console.log('[useAudioContext] ✓ AudioContext resumed successfully');
-        } else {
-          console.log(`[useAudioContext] AudioContext state: ${testContext.state}`);
+          console.log('[useAudioContext] ✓ AudioContext resumed');
         }
 
         // Close test context (we don't need it)
@@ -71,8 +65,6 @@ export function useAudioContext() {
         document.removeEventListener(event, handleInteraction);
       });
     };
-
-    console.log('[useAudioContext] Listening for user interaction to resume AudioContext...');
 
     return cleanup;
   }, []);

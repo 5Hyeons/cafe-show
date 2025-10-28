@@ -14,8 +14,6 @@ interface AppInnerProps {
 }
 
 function AppInner({ roomName, currentScreen, onNextScreen, onBack }: AppInnerProps) {
-  console.log('[AppInner] Current room name:', roomName, 'Screen:', currentScreen);
-
   return (
     <>
       {/* LiveKitChat - 항상 마운트 (메시지 상태 유지) */}
@@ -37,12 +35,10 @@ function App() {
   const hasConnected = useRef(false);
 
   const handleNextScreen = () => {
-    console.log('[App] Switching to Screen 4 - disconnecting React from LiveKit');
     setCurrentScreen('screen4');
   };
 
   const handleBackToChat = () => {
-    console.log('[App] Going back to Screen 1 - reconnecting React to LiveKit');
     setCurrentScreen('screen1');
   };
 

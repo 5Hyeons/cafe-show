@@ -7,6 +7,11 @@ import { ChatMessage } from '../types';
 import { useAnimationData } from '../hooks/useAnimationData';
 import { useAudioContext } from '../hooks/useAudioContext';
 
+// Timing tracking for Unity data transmission
+let firstUnityFrameTime: number | null = null;
+let lastUnityFrameTime: number | null = null;
+let unitySentCount = 0;
+
 interface Screen4Props {
   roomName: string;
   lastMessage?: ChatMessage;
@@ -85,6 +90,19 @@ export function Screen4({ roomName, lastMessage, onBack }: Screen4Props) {
   useEffect(() => {
     if (isLoaded && latestFrame) {
       try {
+        const now = performance.now();
+
+        // First frame to Unity
+        if (firstUnityFrameTime === null) {
+          firstUnityFrameTime = now;
+          console.log('[Screen4→Unity] 🚀 First frame sent to Unity');
+        }
+
+        // Calculate timing
+        const interval = lastUnityFrameTime ? now - lastUnityFrameTime : 0;
+        lastUnityFrameTime = now;
+        unitySentCount++;
+
         // Uint8Array를 comma-separated string으로 변환
         const frameArray = Array.from(latestFrame);
         const frameString = frameArray.join(',');
@@ -92,8 +110,18 @@ export function Screen4({ roomName, lastMessage, onBack }: Screen4Props) {
         // Unity로 전달
         sendMessage('ReactBridge', 'OnAnimationData', frameString);
 
-        if (frameCount % 30 === 0) {
-          console.log('[Screen4] Sent animation frame to Unity:', frameCount);
+        // Log every 30 frames with timing stats
+        if (unitySentCount % 30 === 0) {
+          const elapsed = now - (firstUnityFrameTime || now);
+          const avgInterval = elapsed / unitySentCount;
+          const estimatedFPS = avgInterval > 0 ? 1000 / avgInterval : 0;
+
+          console.log(`[Screen4→Unity] 📤 Sent ${unitySentCount} frames:`, {
+            elapsedMs: Math.round(elapsed),
+            avgIntervalMs: avgInterval.toFixed(2),
+            estimatedFPS: estimatedFPS.toFixed(1),
+            lastIntervalMs: interval.toFixed(2),
+          });
         }
       } catch (error) {
         console.error('[Screen4] Failed to send animation data:', error);
@@ -147,7 +175,7 @@ export function Screen4({ roomName, lastMessage, onBack }: Screen4Props) {
         <button className="w-12 h-12 rounded-full border-2 border-gray-300 flex items-center justify-center text-2xl hover:bg-gray-50">
           ✕
         </button>
-        <p className="text-sm text-gray-600">공금한 점을 물어보세요</p>
+        <p className="text-sm text-gray-600">궁금한 점을 물어보세요</p>
         <button
           onClick={toggleMic}
           className={`w-12 h-12 rounded-full flex items-center justify-center hover:bg-opacity-90 ${

@@ -12,6 +12,19 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Filter out noisy LiveKit SDK logs
+      const originalLog = console.log;
+      console.log = function(...args) {
+        const message = args.join(' ');
+        // Skip noisy LiveKit internal logs
+        if (message.includes('ignoring incoming byte stream') ||
+            message.includes('room event dataReceived')) {
+          return;
+        }
+        originalLog.apply(console, args);
+      };
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
