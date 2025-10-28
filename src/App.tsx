@@ -18,10 +18,12 @@ function AppInner({ roomName, currentScreen, onNextScreen, onBack }: AppInnerPro
 
   return (
     <>
-      {currentScreen === 'screen1' && (
+      {/* LiveKitChat - 항상 마운트 (메시지 상태 유지) */}
+      <div style={{ display: currentScreen === 'screen1' ? 'block' : 'none' }}>
         <LiveKitChat onNextScreen={onNextScreen} />
-      )}
+      </div>
 
+      {/* Screen 4 - 조건부 렌더링 */}
       {currentScreen === 'screen4' && (
         <Screen4 roomName={roomName} onBack={onBack} />
       )}
@@ -87,8 +89,8 @@ function App() {
     <LiveKitRoom
       serverUrl={serverUrl}
       token={token}
-      connect={currentScreen === 'screen1'}
-      audio={false}
+      connect={true}
+      audio={true}
       video={false}
       className="min-h-screen bg-white"
     >

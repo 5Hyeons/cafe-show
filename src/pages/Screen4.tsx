@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Header } from '../components/common/Header';
 import { Unity, useUnityContext } from 'react-unity-webgl';
+import { useLocalParticipant } from '@livekit/components-react';
 import { ChatMessage } from '../types';
+import { useAnimationData } from '../hooks/useAnimationData';
 
 interface Screen4Props {
   roomName: string;
@@ -10,15 +12,16 @@ interface Screen4Props {
 }
 
 export function Screen4({ roomName, lastMessage, onBack }: Screen4Props) {
-  console.log('[Screen4] Received room name:', roomName);
-
-  const hasConnected = useRef(false);
   const { unityProvider, isLoaded, loadingProgression, sendMessage, unload } = useUnityContext({
     loaderUrl: '/unity/Build/unity.loader.js',
     dataUrl: '/unity/Build/unity.data',
     frameworkUrl: '/unity/Build/unity.framework.js',
     codeUrl: '/unity/Build/unity.wasm',
   });
+
+  const { latestFrame, frameCount } = useAnimationData();
+  const { localParticipant } = useLocalParticipant();
+  const [isMicEnabled, setIsMicEnabled] = useState(false);
 
   // Handle back button
   const handleBack = () => {
@@ -39,20 +42,52 @@ export function Screen4({ roomName, lastMessage, onBack }: Screen4Props) {
     onBack();
   };
 
-  // Send room name to Unity when loaded
+  // Auto-enable microphone when Screen 4 loads
   useEffect(() => {
-    if (isLoaded && roomName && !hasConnected.current) {
-      hasConnected.current = true;
-
-      const message = JSON.stringify({
-        action: 'setLiveKitRoom',
-        roomName: roomName
-      });
-
-      sendMessage('ReactBridge', 'OnReactMessage', message);
-      console.log('[Unity] Sent room name to Unity:', roomName);
+    if (localParticipant) {
+      localParticipant.setMicrophoneEnabled(true);
+      setIsMicEnabled(true);
+      console.log('[Screen4] Microphone auto-enabled');
     }
-  }, [isLoaded, roomName, sendMessage]);
+
+    // Cleanup: disable mic when leaving Screen 4
+    return () => {
+      if (localParticipant) {
+        localParticipant.setMicrophoneEnabled(false);
+        console.log('[Screen4] Microphone disabled on unmount');
+      }
+    };
+  }, [localParticipant]);
+
+  // Toggle microphone
+  const toggleMic = async () => {
+    if (localParticipant) {
+      const newState = !isMicEnabled;
+      await localParticipant.setMicrophoneEnabled(newState);
+      setIsMicEnabled(newState);
+      console.log('[Screen4] Microphone toggled:', newState);
+    }
+  };
+
+  // Send animation data to Unity
+  useEffect(() => {
+    if (isLoaded && latestFrame) {
+      try {
+        // Uint8Array를 comma-separated string으로 변환
+        const frameArray = Array.from(latestFrame);
+        const frameString = frameArray.join(',');
+
+        // Unity로 전달
+        sendMessage('ReactBridge', 'OnAnimationData', frameString);
+
+        if (frameCount % 30 === 0) {
+          console.log('[Screen4] Sent animation frame to Unity:', frameCount);
+        }
+      } catch (error) {
+        console.error('[Screen4] Failed to send animation data:', error);
+      }
+    }
+  }, [isLoaded, latestFrame, frameCount, sendMessage]);
 
   // Unity screen (always show canvas, let Unity handle loading)
   return (
@@ -89,7 +124,12 @@ export function Screen4({ roomName, lastMessage, onBack }: Screen4Props) {
           ✕
         </button>
         <p className="text-sm text-gray-600">공금한 점을 물어보세요</p>
-        <button className="w-12 h-12 rounded-full bg-cafeshow-red flex items-center justify-center hover:bg-opacity-90">
+        <button
+          onClick={toggleMic}
+          className={`w-12 h-12 rounded-full flex items-center justify-center hover:bg-opacity-90 ${
+            isMicEnabled ? 'bg-cafeshow-red' : 'bg-gray-400'
+          }`}
+        >
           <img src="/assets/icon-mic-small.svg" alt="음성 입력" className="w-6 h-6 invert" />
         </button>
       </div>
