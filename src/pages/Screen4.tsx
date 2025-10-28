@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Header } from '../components/common/Header';
 import { Unity, useUnityContext } from 'react-unity-webgl';
-import { useLocalParticipant } from '@livekit/components-react';
+import { useLocalParticipant, useTracks, AudioTrack } from '@livekit/components-react';
+import { Track } from 'livekit-client';
 import { ChatMessage } from '../types';
 import { useAnimationData } from '../hooks/useAnimationData';
+import { useAudioContext } from '../hooks/useAudioContext';
 
 interface Screen4Props {
   roomName: string;
@@ -22,6 +24,16 @@ export function Screen4({ roomName, lastMessage, onBack }: Screen4Props) {
   const { latestFrame, frameCount } = useAnimationData();
   const { localParticipant } = useLocalParticipant();
   const [isMicEnabled, setIsMicEnabled] = useState(false);
+
+  // Auto-resume AudioContext on user interaction (fix browser autoplay policy)
+  useAudioContext();
+
+  // Subscribe to agent audio tracks
+  const audioTracks = useTracks([
+    { source: Track.Source.Microphone, withPlaceholder: false },
+  ], {
+    onlySubscribed: true,
+  });
 
   // Handle back button
   const handleBack = () => {
@@ -91,8 +103,20 @@ export function Screen4({ roomName, lastMessage, onBack }: Screen4Props) {
 
   // Unity screen (always show canvas, let Unity handle loading)
   return (
-    <div className="w-full max-w-mobile mx-auto bg-cafeshow-pink min-h-screen flex flex-col">
-      <Header onBack={handleBack} />
+    <>
+      {/* Render agent audio tracks (hidden, only for playback) */}
+      {audioTracks
+        .filter(track => track.participant.identity !== localParticipant.identity)
+        .map((track) => (
+          <AudioTrack
+            key={track.publication.trackSid}
+            trackRef={track}
+            volume={1.0}
+          />
+        ))}
+
+      <div className="w-full max-w-mobile mx-auto bg-cafeshow-pink min-h-screen flex flex-col">
+        <Header onBack={handleBack} />
 
       {/* Unity Canvas Area */}
       <div className="flex-1 relative">
@@ -133,6 +157,7 @@ export function Screen4({ roomName, lastMessage, onBack }: Screen4Props) {
           <img src="/assets/icon-mic-small.svg" alt="음성 입력" className="w-6 h-6 invert" />
         </button>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
