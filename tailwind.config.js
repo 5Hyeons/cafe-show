@@ -9,7 +9,7 @@ export default {
       colors: {
         cafeshow: {
           red: '#da203d',
-          pink: '#fef0f2',
+          pink: '#fff5f7',
           gray: {
             100: '#feffff',
             200: '#dddddd',
