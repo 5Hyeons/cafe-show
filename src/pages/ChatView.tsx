@@ -47,12 +47,12 @@ export function ChatView({ messages, onSendMessage, onNextScreen }: ChatViewProp
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="w-full max-w-mobile mx-auto bg-white min-h-screen flex flex-col relative">
+    <div className="w-full max-w-mobile mx-auto bg-white h-screen flex flex-col relative">
       {/* Header */}
       <Header />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col px-5 pt-10 pb-4 relative z-10 overflow-y-auto">
+      <div className="flex-1 flex flex-col px-5 pt-10 pb-4 relative z-10 overflow-y-auto hide-scrollbar">
         {/* Greeting Text */}
         <div className="text-[23px] leading-[1.4] tracking-[-0.46px] mb-4">
           <p className="mb-0">안녕하세요.</p>
@@ -74,7 +74,7 @@ export function ChatView({ messages, onSendMessage, onNextScreen }: ChatViewProp
 
         {/* Chat Messages (Screen 2 style) */}
         {hasMessages && (
-          <div className="flex-1 mb-4">
+          <div className="mb-4">
             {messages.map((msg) => (
               <ChatMessageItem key={msg.id} message={msg} />
             ))}
@@ -84,9 +84,9 @@ export function ChatView({ messages, onSendMessage, onNextScreen }: ChatViewProp
 
         {/* Avatar and Tooltip - Only show when no messages */}
         {!hasMessages && (
-          <div className="flex flex-col items-end mt-auto">
+          <div className="flex flex-col mt-auto">
             {/* Avatar Image */}
-            <div className="w-[134px] h-[130px] mb-[-8px] relative z-10">
+            <div className="w-[134px] h-[130px] mb-[-8px] relative z-10 ml-auto">
               <img
                 src="/assets/avatar-hand-wave.png"
                 alt="카페쇼 AI"
@@ -95,14 +95,14 @@ export function ChatView({ messages, onSendMessage, onNextScreen }: ChatViewProp
             </div>
 
             {/* Tooltip */}
-            <div className="bg-cafeshow-gray-900 rounded-lg px-[10px] py-[10px] mb-[-8px] relative z-10">
+            <div className="bg-cafeshow-gray-900 rounded-lg px-[10px] py-[10px] mb-[-8px] relative z-10 ml-auto">
               <p className="text-white text-sm font-medium text-center whitespace-nowrap">
                 AI와 대화로 행사 정보를 알아보세요 !
               </p>
             </div>
 
             {/* Tooltip Pointer */}
-            <div className="w-[107px] h-[21px] mb-[-8px] relative z-10">
+            <div className="w-[107px] h-[21px] mb-[-8px] relative z-10 ml-[calc(100%-62px)]">
               <img src="/assets/tooltip-pointer.svg" alt="" className="w-full h-full" />
             </div>
           </div>
