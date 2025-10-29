@@ -26,7 +26,7 @@ export function Screen4({ roomName, lastMessage, onBack }: Screen4Props) {
     codeUrl: '/unity/Build/unity.wasm',
   });
 
-  const { latestFrame, frameCount } = useAnimationData();
+  const { latestFrame, frameCount, interruptSignal } = useAnimationData();
   const { localParticipant } = useLocalParticipant();
   const [isMicEnabled, setIsMicEnabled] = useState(false);
 
@@ -86,7 +86,15 @@ export function Screen4({ roomName, lastMessage, onBack }: Screen4Props) {
     }
   };
 
-  // Send animation data to Unity
+  // Interrupt signal - immediate execution (bypasses queue)
+  useEffect(() => {
+    if (interruptSignal > 0 && isLoaded) {
+      sendMessage('ReactBridge', 'OnAnimationData', 'interrupted');
+      console.log('[Screen4→Unity] ⚠️ Interrupt sent (immediate)');
+    }
+  }, [interruptSignal, isLoaded, sendMessage]);
+
+  // Send animation data to Unity (including final signal via queue)
   useEffect(() => {
     if (isLoaded && latestFrame) {
       try {
@@ -103,15 +111,24 @@ export function Screen4({ roomName, lastMessage, onBack }: Screen4Props) {
         lastUnityFrameTime = now;
         unitySentCount++;
 
-        // Uint8Array를 comma-separated string으로 변환
-        const frameArray = Array.from(latestFrame);
-        const frameString = frameArray.join(',');
+        // Convert to string
+        let frameString: string;
+
+        if (latestFrame.length === 208) {
+          // Animation frame: Uint8Array → comma-separated string
+          const frameArray = Array.from(latestFrame);
+          frameString = frameArray.join(',');
+        } else {
+          // Control signal (final): decode as string
+          frameString = new TextDecoder().decode(latestFrame);
+          console.log(`[Screen4→Unity] 🏁 Final signal sent (via queue)`);
+        }
 
         // Unity로 전달
         sendMessage('ReactBridge', 'OnAnimationData', frameString);
 
-        // Log every 30 frames with timing stats
-        if (unitySentCount % 30 === 0) {
+        // Log every 20 frames (downsampled to 20fps)
+        if (unitySentCount % 20 === 0) {
           const elapsed = now - (firstUnityFrameTime || now);
           const avgInterval = elapsed / unitySentCount;
           const estimatedFPS = avgInterval > 0 ? 1000 / avgInterval : 0;
@@ -127,7 +144,7 @@ export function Screen4({ roomName, lastMessage, onBack }: Screen4Props) {
         console.error('[Screen4] Failed to send animation data:', error);
       }
     }
-  }, [isLoaded, latestFrame, frameCount, sendMessage]);
+  }, [isLoaded, latestFrame, sendMessage]);
 
   // Unity screen (always show canvas, let Unity handle loading)
   return (

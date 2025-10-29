@@ -6,6 +6,7 @@ export function useAnimationData() {
   const room = useRoomContext();
   const [latestFrame, setLatestFrame] = useState<Uint8Array | null>(null);
   const [frameCount, setFrameCount] = useState(0);
+  const [interruptSignal, setInterruptSignal] = useState(0);
 
   // Frame queue for buffering
   const frameQueue = useRef<Uint8Array[]>([]);
@@ -57,6 +58,24 @@ export function useAnimationData() {
           });
         }
       }
+      // Control signals (문자열: "final" 또는 "interrupted")
+      else {
+        try {
+          const message = new TextDecoder().decode(payload);
+
+          if (message === 'final') {
+            console.log('[AnimationData] 🏁 Final signal - adding to queue (순서 유지)');
+            frameQueue.current.push(payload);  // 큐에 추가 (순서 보장)
+          }
+          else if (message === 'interrupted') {
+            console.log('[AnimationData] ⚠️ Interrupt signal - immediate clear');
+            frameQueue.current = [];  // 즉시 큐 비우기
+            setInterruptSignal(Date.now());  // Unity로 즉시 전파
+          }
+        } catch (e) {
+          // Ignore decode errors
+        }
+      }
     };
 
     room.on(RoomEvent.DataReceived, handleDataReceived);
@@ -88,5 +107,6 @@ export function useAnimationData() {
   return {
     latestFrame,
     frameCount,
+    interruptSignal,
   };
 }
