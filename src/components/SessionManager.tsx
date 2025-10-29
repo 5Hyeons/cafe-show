@@ -1,15 +1,18 @@
 import { useChat, useLocalParticipant, useRoomContext, useTracks, AudioTrack, useConnectionState } from '@livekit/components-react';
 import { Track, ConnectionState } from 'livekit-client';
 import { ChatView } from '../pages/ChatView';
-import { ChatMessage } from '../types';
+import { AvatarView } from '../pages/AvatarView';
+import { ChatMessage, ScreenType } from '../types';
 import { useCallback, useEffect, useState } from 'react';
 import { useAudioContext } from '../hooks/useAudioContext';
 
-interface LiveKitChatProps {
+interface SessionManagerProps {
+  currentScreen: ScreenType;
   onNextScreen?: () => void;
+  onBack?: () => void;
 }
 
-export function LiveKitChat({ onNextScreen }: LiveKitChatProps) {
+export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionManagerProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const { chatMessages, send } = useChat();
   const { localParticipant } = useLocalParticipant();
@@ -179,6 +182,9 @@ export function LiveKitChat({ onNextScreen }: LiveKitChatProps) {
     await send(text);
   }, [send]);
 
+  // Get last agent message for AvatarView
+  const lastAgentMessage = messages.filter(m => !m.isUser).pop();
+
   return (
     <>
       {/* Render agent audio tracks (hidden, only for playback) */}
@@ -192,11 +198,19 @@ export function LiveKitChat({ onNextScreen }: LiveKitChatProps) {
           />
         ))}
 
-      <ChatView
-        messages={messages}
-        onSendMessage={handleSendMessage}
-        onNextScreen={onNextScreen}
-      />
+      {/* Screen switching */}
+      {currentScreen === 'chat' ? (
+        <ChatView
+          messages={messages}
+          onSendMessage={handleSendMessage}
+          onNextScreen={onNextScreen}
+        />
+      ) : (
+        <AvatarView
+          lastMessage={lastAgentMessage}
+          onBack={onBack}
+        />
+      )}
     </>
   );
 }

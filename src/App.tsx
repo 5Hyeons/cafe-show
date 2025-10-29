@@ -1,8 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { LiveKitRoom } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { LiveKitChat } from './components/LiveKitChat';
-import { AvatarView } from './pages/AvatarView';
+import { SessionManager } from './components/SessionManager';
 import { useLiveKit } from './hooks/useLiveKit';
 import { ScreenType } from './types';
 
@@ -15,17 +14,11 @@ interface AppInnerProps {
 
 function AppInner({ roomName, currentScreen, onNextScreen, onBack }: AppInnerProps) {
   return (
-    <>
-      {/* LiveKitChat - 항상 마운트 (메시지 상태 유지) */}
-      <div style={{ display: currentScreen === 'chat' ? 'block' : 'none' }}>
-        <LiveKitChat onNextScreen={onNextScreen} />
-      </div>
-
-      {/* Screen 4 - 조건부 렌더링 */}
-      {currentScreen === 'avatar' && (
-        <AvatarView roomName={roomName} onBack={onBack} />
-      )}
-    </>
+    <SessionManager
+      currentScreen={currentScreen}
+      onNextScreen={onNextScreen}
+      onBack={onBack}
+    />
   );
 }
 

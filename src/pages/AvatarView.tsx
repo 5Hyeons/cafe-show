@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Header } from '../components/common/Header';
 import { Unity, useUnityContext } from 'react-unity-webgl';
-import { useLocalParticipant, useTracks, AudioTrack } from '@livekit/components-react';
-import { Track } from 'livekit-client';
+import { useLocalParticipant } from '@livekit/components-react';
 import { ChatMessage } from '../types';
 import { useAnimationData } from '../hooks/useAnimationData';
-import { useAudioContext } from '../hooks/useAudioContext';
 
 // Timing tracking for Unity data transmission
 let firstUnityFrameTime: number | null = null;
@@ -13,12 +11,11 @@ let lastUnityFrameTime: number | null = null;
 let unitySentCount = 0;
 
 interface AvatarViewProps {
-  roomName: string;
   lastMessage?: ChatMessage;
   onBack: () => void;
 }
 
-export function AvatarView({ roomName, lastMessage, onBack }: AvatarViewProps) {
+export function AvatarView({ lastMessage, onBack }: AvatarViewProps) {
   const { unityProvider, isLoaded, loadingProgression, sendMessage, unload } = useUnityContext({
     loaderUrl: '/unity/Build/unity.loader.js',
     dataUrl: '/unity/Build/unity.data',
@@ -31,16 +28,6 @@ export function AvatarView({ roomName, lastMessage, onBack }: AvatarViewProps) {
   const { latestFrame, frameCount, interruptSignal } = useAnimationData();
   const { localParticipant } = useLocalParticipant();
   const [isMicEnabled, setIsMicEnabled] = useState(false);
-
-  // Auto-resume AudioContext on user interaction (fix browser autoplay policy)
-  useAudioContext();
-
-  // Subscribe to agent audio tracks
-  const audioTracks = useTracks([
-    { source: Track.Source.Microphone, withPlaceholder: false },
-  ], {
-    onlySubscribed: true,
-  });
 
   // Handle back button
   const handleBack = () => {
@@ -61,7 +48,7 @@ export function AvatarView({ roomName, lastMessage, onBack }: AvatarViewProps) {
     onBack();
   };
 
-  // Auto-enable microphone when Screen 4 loads
+  // Auto-enable microphone when Avatar View loads
   useEffect(() => {
     if (localParticipant) {
       localParticipant.setMicrophoneEnabled(true);
@@ -69,7 +56,7 @@ export function AvatarView({ roomName, lastMessage, onBack }: AvatarViewProps) {
       console.log('[AvatarView] Microphone auto-enabled');
     }
 
-    // Cleanup: disable mic when leaving Screen 4
+    // Cleanup: disable mic when leaving Avatar View
     return () => {
       if (localParticipant) {
         localParticipant.setMicrophoneEnabled(false);
@@ -150,24 +137,43 @@ export function AvatarView({ roomName, lastMessage, onBack }: AvatarViewProps) {
 
   // Unity screen (always show canvas, let Unity handle loading)
   return (
-    <>
-      {/* Render agent audio tracks (hidden, only for playback) */}
-      {audioTracks
-        .filter(track => track.participant.identity !== localParticipant.identity)
-        .map((track) => (
-          <AudioTrack
-            key={track.publication.trackSid}
-            trackRef={track}
-            volume={1.0}
-          />
-        ))}
-
-      <div className={`w-full max-w-mobile mx-auto min-h-screen flex flex-col ${isLoaded ? "bg-cafeshow-pink" : "bg-white"}`}>
+    <div className={`w-full max-w-mobile mx-auto min-h-screen flex flex-col ${isLoaded ? "bg-cafeshow-pink" : "bg-white"}`}>
         <Header />
 
+      {/* Agent Message - 로딩 완료 시에만 표시 */}
+      {isLoaded && (
+      <div className="px-5 pt-10 pb-4">
+        <div className="text-center mb-4">
+          {lastMessage ? (
+            // Agent 메시지 있으면 표시
+            <p className="text-[23px] leading-[1.4] tracking-[-0.46px] text-black">
+              {lastMessage.message}
+            </p>
+          ) : (
+            // 초기 인사 메시지
+            <div className="text-[23px] leading-[1.4] tracking-[-0.46px] text-black">
+              <p className="mb-0">안녕하세요.</p>
+              <p className="mb-0">
+                <span className="font-bold text-cafeshow-red">카페쇼 AI </span>
+                입니다.
+              </p>
+              <p>무엇을 도와드릴까요?</p>
+            </div>
+          )}
+        </div>
+
+        {!lastMessage && (
+          <p className="text-[16px] text-[#666666] tracking-[-0.32px] leading-[1.3] text-center">
+            아바타와 대화를 시작해보세요
+          </p>
+          )}
+        </div>
+      )}
+
       {/* Unity Canvas Area */}
-      <div className="flex-1 relative">
-        <div className="relative w-full h-full flex items-center justify-center">
+      <div className="flex-1 relative flex flex-col">
+        <div className="flex-grow" />
+        <div className="flex justify-center">
           {/* Unity 캔버스 - 430x420 고정 크기 (Figma 디자인) */}
           <div style={{ width: '430px', height: '420px' }}>
             <Unity
@@ -241,7 +247,7 @@ export function AvatarView({ roomName, lastMessage, onBack }: AvatarViewProps) {
       </div>
 
       {/* Bottom Controls - Figma 디자인 */}
-      <div className="bg-white px-10 py-4 flex flex-col gap-2 items-center border-t border-gray-200">
+      <div className="px-10 py-4 flex flex-col gap-2 items-center border-t border-gray-200">
         {/* 버튼 영역 */}
         <div className="flex items-center gap-2 w-full">
           {/* X 버튼 */}
@@ -310,7 +316,6 @@ export function AvatarView({ roomName, lastMessage, onBack }: AvatarViewProps) {
           AI 이기 때문에 실수할 수 있습니다.
         </p>
       </div>
-      </div>
-    </>
+    </div>
   );
 }
