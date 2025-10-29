@@ -1,6 +1,6 @@
 import { useChat, useLocalParticipant, useRoomContext, useTracks, AudioTrack, useConnectionState } from '@livekit/components-react';
 import { Track, ConnectionState } from 'livekit-client';
-import { Screen1 } from '../pages/Screen1';
+import { ChatView } from '../pages/ChatView';
 import { ChatMessage } from '../types';
 import { useCallback, useEffect, useState } from 'react';
 import { useAudioContext } from '../hooks/useAudioContext';
@@ -26,12 +26,12 @@ export function LiveKitChat({ onNextScreen }: LiveKitChatProps) {
     onlySubscribed: true,
   });
 
-  // Disable microphone in Screen1 (text-only chat)
+  // Disable microphone in ChatView (text-only chat)
   // Only after connection is established to ensure it takes effect
   useEffect(() => {
     if (localParticipant && connectionState === ConnectionState.Connected) {
       localParticipant.setMicrophoneEnabled(false);
-      console.log('[LiveKitChat] Microphone disabled for Screen1 (connection established)');
+      console.log('[LiveKitChat] Microphone disabled for ChatView (connection established)');
     }
 
     // Cleanup: disable mic when unmounting
@@ -192,7 +192,7 @@ export function LiveKitChat({ onNextScreen }: LiveKitChatProps) {
           />
         ))}
 
-      <Screen1
+      <ChatView
         messages={messages}
         onSendMessage={handleSendMessage}
         onNextScreen={onNextScreen}

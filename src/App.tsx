@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { LiveKitRoom } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { LiveKitChat } from './components/LiveKitChat';
-import { Screen4 } from './pages/Screen4';
+import { AvatarView } from './pages/AvatarView';
 import { useLiveKit } from './hooks/useLiveKit';
 import { ScreenType } from './types';
 
@@ -17,13 +17,13 @@ function AppInner({ roomName, currentScreen, onNextScreen, onBack }: AppInnerPro
   return (
     <>
       {/* LiveKitChat - 항상 마운트 (메시지 상태 유지) */}
-      <div style={{ display: currentScreen === 'screen1' ? 'block' : 'none' }}>
+      <div style={{ display: currentScreen === 'chat' ? 'block' : 'none' }}>
         <LiveKitChat onNextScreen={onNextScreen} />
       </div>
 
       {/* Screen 4 - 조건부 렌더링 */}
-      {currentScreen === 'screen4' && (
-        <Screen4 roomName={roomName} onBack={onBack} />
+      {currentScreen === 'avatar' && (
+        <AvatarView roomName={roomName} onBack={onBack} />
       )}
     </>
   );
@@ -31,15 +31,15 @@ function AppInner({ roomName, currentScreen, onNextScreen, onBack }: AppInnerPro
 
 function App() {
   const { token, serverUrl, roomName, connect, isConnecting, error } = useLiveKit();
-  const [currentScreen, setCurrentScreen] = useState<ScreenType>('screen1');
+  const [currentScreen, setCurrentScreen] = useState<ScreenType>('chat');
   const hasConnected = useRef(false);
 
   const handleNextScreen = () => {
-    setCurrentScreen('screen4');
+    setCurrentScreen('avatar');
   };
 
   const handleBackToChat = () => {
-    setCurrentScreen('screen1');
+    setCurrentScreen('chat');
   };
 
   // Auto-connect on mount (only once, prevent Strict Mode double execution)

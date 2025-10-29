@@ -4,13 +4,13 @@ import { TagButton } from '../components/common/TagButton';
 import { ChatMessageItem } from '../components/chat/ChatMessageItem';
 import { ChatMessage } from '../types';
 
-interface Screen1Props {
+interface ChatViewProps {
   messages: ChatMessage[];
   onSendMessage: (message: string) => void;
   onNextScreen?: () => void;
 }
 
-export function Screen1({ messages, onSendMessage, onNextScreen }: Screen1Props) {
+export function ChatView({ messages, onSendMessage, onNextScreen }: ChatViewProps) {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -50,11 +50,6 @@ export function Screen1({ messages, onSendMessage, onNextScreen }: Screen1Props)
     <div className="w-full max-w-mobile mx-auto bg-white min-h-screen flex flex-col relative">
       {/* Header */}
       <Header />
-
-      {/* Background Gradient Circle */}
-      <div className="absolute left-11 top-[-365px] w-[662px] h-[662px] pointer-events-none">
-        <img src="/assets/bg-gradient-circle.svg" alt="" className="w-full h-full" />
-      </div>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col px-5 pt-10 pb-4 relative z-10 overflow-y-auto">
@@ -142,7 +137,7 @@ export function Screen1({ messages, onSendMessage, onNextScreen }: Screen1Props)
               className="w-10 h-10 flex-shrink-0"
               title="아바타 모드로 전환"
             >
-              <img src="/assets/icon-mic-large.svg" alt="아바타 모드" className="w-full h-full" />
+              <img src="/assets/icon-to-avatar.png" alt="아바타 모드" className="w-full h-full" />
             </button>
           )}
         </div>

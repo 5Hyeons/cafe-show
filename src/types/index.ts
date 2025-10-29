@@ -8,7 +8,7 @@ export interface ChatMessage {
 }
 
 // Screen states
-export type ScreenType = 'screen1' | 'screen2' | 'screen3' | 'screen4';
+export type ScreenType = 'chat' | 'avatar';
 
 // Unity instance type
 export interface UnityInstance {
