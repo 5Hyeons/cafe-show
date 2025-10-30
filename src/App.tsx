@@ -12,7 +12,7 @@ interface AppInnerProps {
   onBack: () => void;
 }
 
-function AppInner({ roomName, currentScreen, onNextScreen, onBack }: AppInnerProps) {
+function AppInner({ currentScreen, onNextScreen, onBack }: AppInnerProps) {
   return (
     <SessionManager
       currentScreen={currentScreen}

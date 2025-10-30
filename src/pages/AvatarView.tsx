@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from '../components/common/Header';
 import { Unity, useUnityContext } from 'react-unity-webgl';
 import { useLocalParticipant } from '@livekit/components-react';
@@ -21,7 +21,7 @@ interface AvatarViewProps {
 
 export function AvatarView({ lastMessage, agentState, userVolume, onBack }: AvatarViewProps) {
 
-  const { unityProvider, isLoaded, loadingProgression, sendMessage, unload } = useUnityContext({
+  const { unityProvider, isLoaded, sendMessage } = useUnityContext({
     loaderUrl: '/unity/Build/unity.loader.js',
     dataUrl: '/unity/Build/unity.data',
     frameworkUrl: '/unity/Build/unity.framework.js',
@@ -30,7 +30,7 @@ export function AvatarView({ lastMessage, agentState, userVolume, onBack }: Avat
 
   // loadingProgression: 0 to 1 (Unity 로딩 진행률)
 
-  const { latestFrame, frameCount, interruptSignal } = useAnimationData();
+  const { latestFrame, interruptSignal } = useAnimationData();
   const { localParticipant } = useLocalParticipant();
   const [isMicEnabled, setIsMicEnabled] = useState(false);
 

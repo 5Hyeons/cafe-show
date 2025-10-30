@@ -74,7 +74,7 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
   useEffect(() => {
     if (!room) return;
 
-    const handleTranscription = async (reader: any, participantIdentity: string) => {
+    const handleTranscription = async (reader: any, participantIdentity: string | { identity: string }) => {
       try {
         const isTranscription = reader.info?.attributes?.['lk.transcribed_track_id'];
         const isFinal = reader.info?.attributes?.['lk.transcription_final'] === 'true';
@@ -203,7 +203,7 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
   useEffect(() => {
     if (!localParticipant) return;
 
-    const unregister = localParticipant.registerRpcMethod(
+    const unregisterState = localParticipant.registerRpcMethod(
       'agent_state_changed',
       async (data) => {
         try {
@@ -211,16 +211,18 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
           const newState = payload.new_state as AgentState;
           setAgentState(newState);
           console.log('[SessionManager] Agent state changed:', newState);
+          return '';  // RPC requires string return
         } catch (error) {
           console.error('[SessionManager] Failed to parse agent state RPC:', error);
+          return '';
         }
       }
-    );
+    ) as (() => void) | undefined;
 
     return () => {
       // Safely call unregister if it's a function
-      if (typeof unregister === 'function') {
-        unregister();
+      if (unregisterState) {
+        unregisterState();
       }
     };
   }, [localParticipant]);
@@ -229,7 +231,7 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
   useEffect(() => {
     if (!localParticipant) return;
 
-    const unregister = localParticipant.registerRpcMethod(
+    const unregisterDetail = localParticipant.registerRpcMethod(
       'show_event_details',
       async (data) => {
         try {
@@ -240,16 +242,17 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
           setPendingDetailTopic(topic);
           console.log('[SessionManager] Pending detail topic:', topic);
 
-          // Immediately return (prevent RPC timeout)
+          return '';  // RPC requires string return
         } catch (error) {
           console.error('[SessionManager] Failed to parse detail RPC:', error);
+          return '';
         }
       }
-    );
+    ) as (() => void) | undefined;
 
     return () => {
-      if (typeof unregister === 'function') {
-        unregister();
+      if (unregisterDetail) {
+        unregisterDetail();
       }
     };
   }, [localParticipant]);
@@ -340,10 +343,11 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
       {/* Render agent audio tracks (hidden, only for playback) */}
       {audioTracks
         .filter(track => track.participant.identity !== localParticipant.identity)
+        .filter(track => track.publication)
         .map((track) => (
           <AudioTrack
-            key={track.publication.trackSid}
-            trackRef={track}
+            key={track.publication!.trackSid}
+            trackRef={track as any}
             volume={1.0}
           />
         ))}

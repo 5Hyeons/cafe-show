@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { generateToken, generateRoomId, getOrCreateParticipantIdentity } from '../lib/livekit';
 
 export function useLiveKit() {
