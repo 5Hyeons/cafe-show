@@ -52,7 +52,7 @@ export async function loadUnityBuild(
   onProgress?: (progress: number) => void
 ): Promise<UnityInstance> {
   // Load Unity loader script
-  await loadScript('/unity/Build/mirabel-unity-webgl-builds.loader.js');
+  await loadScript('/unity/Build/cafe-show-unity-webgl-builds.loader.js');
 
   // Wait for createUnityInstance to be available
   let retries = 0;
@@ -66,12 +66,12 @@ export async function loadUnityBuild(
   }
 
   const config: UnityConfig = {
-    dataUrl: '/unity/Build/mirabel-unity-webgl-builds.data',
-    frameworkUrl: '/unity/Build/mirabel-unity-webgl-builds.framework.js',
-    codeUrl: '/unity/Build/mirabel-unity-webgl-builds.wasm',
+    dataUrl: '/unity/Build/cafe-show-unity-webgl-builds.data',
+    frameworkUrl: '/unity/Build/cafe-show-unity-webgl-builds.framework.js',
+    codeUrl: '/unity/Build/cafe-show-unity-webgl-builds.wasm',
     streamingAssetsUrl: 'StreamingAssets',
     companyName: 'DefaultCompany',
-    productName: 'mirabel-unity-webgl',
+    productName: 'cafe-show-unity-webgl',
     productVersion: '1.0',
     webglContextAttributes: {
       alpha: true,
