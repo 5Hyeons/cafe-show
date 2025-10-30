@@ -22,7 +22,7 @@ export async function generateToken(
     metadata: metadata || defaultMetadata
   };
 
-  const response = await fetch(`${import.meta.env.VITE_TOKEN_SERVER_URL}/token`, {
+  const response = await fetch(import.meta.env.VITE_TOKEN_SERVER_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request)
