@@ -14,6 +14,7 @@ interface SessionManagerProps {
 
 export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionManagerProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [avatarMessage, setAvatarMessage] = useState<ChatMessage | undefined>(undefined);
   const { chatMessages, send } = useChat();
   const { localParticipant } = useLocalParticipant();
   const room = useRoomContext();
@@ -100,6 +101,11 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
               sender: isUserTranscription ? 'You' : 'Agent',
             };
 
+            // Update avatarMessage if in AvatarView and this is an agent message
+            if (currentScreen === 'avatar' && !isUserTranscription) {
+              setAvatarMessage(updatedMessage);
+            }
+
             if (existingIndex >= 0) {
               // Update existing message
               const newMessages = [...prev];
@@ -175,6 +181,29 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
     });
   }, [chatMessages, localParticipant.identity]);
 
+  // RPC method call to interrupt agent
+  const interruptAgent = useCallback(async () => {
+    try {
+      const agentParticipant = Array.from(room.remoteParticipants.values())
+        .find(p => p.identity.startsWith('agent'));
+
+      if (!agentParticipant) {
+        console.warn('Agent participant not found for interrupt RPC');
+        return;
+      }
+
+      await localParticipant.performRpc({
+        destinationIdentity: agentParticipant.identity,
+        method: 'interrupt_agent',
+        payload: '',
+      });
+
+      console.log('Agent interrupted via RPC');
+    } catch (error) {
+      console.error('Failed to interrupt agent:', error);
+    }
+  }, [room, localParticipant]);
+
   const handleSendMessage = useCallback(async (text: string) => {
     if (!text.trim()) return;
 
@@ -182,8 +211,20 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
     await send(text);
   }, [send]);
 
-  // Get last agent message for AvatarView
-  const lastAgentMessage = messages.filter(m => !m.isUser).pop();
+  // Event handler wrapper for screen navigation with optional interrupt
+  const handleNextScreen = useCallback(async (shouldInterrupt: boolean = false) => {
+    if (shouldInterrupt) {
+      await interruptAgent();
+    }
+    setAvatarMessage(undefined);  // Reset to show initial greeting when entering AvatarView
+    onNextScreen?.();
+  }, [interruptAgent, onNextScreen]);
+
+  // Event handler wrapper for back navigation (always interrupt agent)
+  const handleBack = useCallback(async () => {
+    await interruptAgent();
+    onBack?.();
+  }, [interruptAgent, onBack]);
 
   return (
     <>
@@ -203,12 +244,12 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
         <ChatView
           messages={messages}
           onSendMessage={handleSendMessage}
-          onNextScreen={onNextScreen}
+          onNextScreen={handleNextScreen}
         />
       ) : (
         <AvatarView
-          lastMessage={lastAgentMessage}
-          onBack={onBack}
+          lastMessage={avatarMessage}
+          onBack={handleBack}
         />
       )}
     </>

@@ -7,7 +7,7 @@ import { ChatMessage } from '../types';
 interface ChatViewProps {
   messages: ChatMessage[];
   onSendMessage: (message: string) => void;
-  onNextScreen?: () => void;
+  onNextScreen?: (shouldInterrupt?: boolean) => void;
 }
 
 export function ChatView({ messages, onSendMessage, onNextScreen }: ChatViewProps) {
@@ -49,7 +49,7 @@ export function ChatView({ messages, onSendMessage, onNextScreen }: ChatViewProp
     if (inputValue.trim()) {
       handleSend();
     } else if (onNextScreen) {
-      onNextScreen();
+      onNextScreen(true);  // shouldInterrupt = true when switching without text input
     }
   };
 
