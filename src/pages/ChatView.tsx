@@ -44,6 +44,24 @@ export function ChatView({ messages, onSendMessage, onNextScreen }: ChatViewProp
     onSendMessage(tag);
   };
 
+  // Dynamic button handler: send message if text exists, otherwise switch to avatar mode
+  const handleDynamicButton = () => {
+    if (inputValue.trim()) {
+      handleSend();
+    } else if (onNextScreen) {
+      onNextScreen();
+    }
+  };
+
+  // Dynamic icon based on input state
+  const buttonIcon = inputValue.trim()
+    ? '/assets/icon-send-message-4x.png'
+    : '/assets/icon-to-avatar.png';
+
+  const buttonTitle = inputValue.trim()
+    ? '메시지 전송'
+    : '아바타 모드로 전환';
+
   const hasMessages = messages.length > 0;
 
   return (
@@ -122,24 +140,14 @@ export function ChatView({ messages, onSendMessage, onNextScreen }: ChatViewProp
             className="flex-1 bg-transparent outline-none text-base placeholder:text-cafeshow-gray-300"
           />
 
-          {/* Send Button (Simple Text) */}
+          {/* Dynamic Button: Send message or Switch to avatar mode */}
           <button
-            onClick={handleSend}
-            className="px-3 py-1 bg-cafeshow-red text-white text-sm rounded-full hover:bg-opacity-90 transition"
+            onClick={handleDynamicButton}
+            className="w-10 h-10 flex-shrink-0"
+            title={buttonTitle}
           >
-            전송
+            <img src={buttonIcon} alt={buttonTitle} className="w-full h-full" />
           </button>
-
-          {/* Next Screen Button (Red Circle - Always enabled) */}
-          {onNextScreen && (
-            <button
-              onClick={onNextScreen}
-              className="w-10 h-10 flex-shrink-0"
-              title="아바타 모드로 전환"
-            >
-              <img src="/assets/icon-to-avatar.png" alt="아바타 모드" className="w-full h-full" />
-            </button>
-          )}
         </div>
 
         {/* Disclaimer Text */}
