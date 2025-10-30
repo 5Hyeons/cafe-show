@@ -5,6 +5,7 @@ import { AvatarView } from '../pages/AvatarView';
 import { ChatMessage, ScreenType } from '../types';
 import { useCallback, useEffect, useState } from 'react';
 import { useAudioContext } from '../hooks/useAudioContext';
+import { useTrackVolume } from '../hooks/useTrackVolume';
 
 type AgentState = 'initializing' | 'idle' | 'listening' | 'thinking' | 'speaking' | 'searching';
 
@@ -32,6 +33,12 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
   ], {
     onlySubscribed: true,
   });
+
+  // Get user's microphone track for volume detection
+  const userMicTrack = localParticipant.getTrackPublication(Track.Source.Microphone)?.track;
+
+  // Detect user microphone volume (only in AvatarView)
+  const userVolume = useTrackVolume(currentScreen === 'avatar' ? userMicTrack : undefined);
 
   // Disable microphone in ChatView (text-only chat)
   // Only after connection is established to ensure it takes effect
@@ -106,6 +113,7 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
 
             // Update avatarMessage if in AvatarView and this is an agent message
             if (currentScreen === 'avatar' && !isUserTranscription) {
+              console.log('[SessionManager] Setting avatarMessage:', updatedMessage);
               setAvatarMessage(updatedMessage);
             }
 
@@ -279,6 +287,7 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
         <AvatarView
           lastMessage={avatarMessage}
           agentState={agentState}
+          userVolume={userVolume}
           onBack={handleBack}
         />
       )}

@@ -15,10 +15,13 @@ type AgentState = 'initializing' | 'idle' | 'listening' | 'thinking' | 'speaking
 interface AvatarViewProps {
   lastMessage?: ChatMessage;
   agentState: AgentState | null;
+  userVolume: number;
   onBack: () => void;
 }
 
-export function AvatarView({ lastMessage, agentState, onBack }: AvatarViewProps) {
+export function AvatarView({ lastMessage, agentState, userVolume, onBack }: AvatarViewProps) {
+  console.log('[AvatarView] Props:', { lastMessage, agentState, userVolume });
+
   const { unityProvider, isLoaded, loadingProgression, sendMessage, unload } = useUnityContext({
     loaderUrl: '/unity/Build/unity.loader.js',
     dataUrl: '/unity/Build/unity.data',
@@ -154,8 +157,26 @@ export function AvatarView({ lastMessage, agentState, onBack }: AvatarViewProps)
 
   // Unity screen (always show canvas, let Unity handle loading)
   return (
-    <div className={`w-full max-w-mobile mx-auto min-h-screen flex flex-col ${isLoaded ? "bg-cafeshow-pink" : "bg-white"}`}>
+    <div className={`w-full max-w-mobile mx-auto min-h-screen flex flex-col relative ${isLoaded ? "bg-cafeshow-pink" : "bg-white"}`}>
         <Header />
+
+      {/* Volume-reactive gradient overlay (bottom) */}
+      {isLoaded && isMicEnabled && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '350px',
+            background: 'linear-gradient(to top, rgba(218, 32, 61, 0.5), transparent)',
+            opacity: userVolume > 0.2 ? userVolume : 0,
+            transition: 'opacity 0.2s ease-in-out',
+            pointerEvents: 'none',
+            zIndex: 0,
+          }}
+        />
+      )}
 
       {/* Agent Message - 로딩 완료 시에만 표시 */}
       {isLoaded && (
@@ -264,7 +285,10 @@ export function AvatarView({ lastMessage, agentState, onBack }: AvatarViewProps)
       </div>
 
       {/* Bottom Controls - Figma 디자인 */}
-      <div className="px-10 py-4 flex flex-col gap-2 items-center border-t border-gray-200">
+      <div
+        className="px-10 py-4 flex flex-col gap-2 items-center border-t border-gray-200"
+        style={{ position: 'relative', zIndex: 10 }}
+      >
         {/* 버튼 영역 */}
         <div className="flex items-center gap-2 w-full">
           {/* X 버튼 */}
