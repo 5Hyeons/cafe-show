@@ -20,7 +20,6 @@ interface AvatarViewProps {
 }
 
 export function AvatarView({ lastMessage, agentState, userVolume, onBack }: AvatarViewProps) {
-  console.log('[AvatarView] Props:', { lastMessage, agentState, userVolume });
 
   const { unityProvider, isLoaded, loadingProgression, sendMessage, unload } = useUnityContext({
     loaderUrl: '/unity/Build/unity.loader.js',

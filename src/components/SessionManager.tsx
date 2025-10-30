@@ -3,7 +3,7 @@ import { Track, ConnectionState } from 'livekit-client';
 import { ChatView } from '../pages/ChatView';
 import { AvatarView } from '../pages/AvatarView';
 import { ChatMessage, ScreenType } from '../types';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { useAudioContext } from '../hooks/useAudioContext';
 import { useTrackVolume } from '../hooks/useTrackVolume';
 
@@ -23,6 +23,12 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
   const { localParticipant } = useLocalParticipant();
   const room = useRoomContext();
   const connectionState = useConnectionState();
+
+  // Ref to track current screen (avoid closure issue in event handlers)
+  const currentScreenRef = useRef(currentScreen);
+  useEffect(() => {
+    currentScreenRef.current = currentScreen;
+  }, [currentScreen]);
 
   // Auto-resume AudioContext on user interaction (fix browser autoplay policy)
   useAudioContext();
@@ -70,6 +76,7 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
 
         // Ignore non-transcriptions
         if (!isTranscription) {
+          console.log('[LiveKitChat] Non-transcription:', reader.info);
           return;
         }
 
@@ -112,8 +119,7 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
             };
 
             // Update avatarMessage if in AvatarView and this is an agent message
-            if (currentScreen === 'avatar' && !isUserTranscription) {
-              console.log('[SessionManager] Setting avatarMessage:', updatedMessage);
+            if (currentScreenRef.current === 'avatar' && !isUserTranscription) {
               setAvatarMessage(updatedMessage);
             }
 
