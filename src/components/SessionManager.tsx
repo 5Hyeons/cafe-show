@@ -6,6 +6,8 @@ import { ChatMessage, ScreenType } from '../types';
 import { useCallback, useEffect, useState } from 'react';
 import { useAudioContext } from '../hooks/useAudioContext';
 
+type AgentState = 'initializing' | 'idle' | 'listening' | 'thinking' | 'speaking' | 'searching';
+
 interface SessionManagerProps {
   currentScreen: ScreenType;
   onNextScreen?: () => void;
@@ -15,6 +17,7 @@ interface SessionManagerProps {
 export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionManagerProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [avatarMessage, setAvatarMessage] = useState<ChatMessage | undefined>(undefined);
+  const [agentState, setAgentState] = useState<AgentState | null>(null);
   const { chatMessages, send } = useChat();
   const { localParticipant } = useLocalParticipant();
   const room = useRoomContext();
@@ -155,6 +158,32 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
     };
   }, [room, localParticipant.identity]);
 
+  // Register RPC handler for agent state changes
+  useEffect(() => {
+    if (!localParticipant) return;
+
+    const unregister = localParticipant.registerRpcMethod(
+      'agent_state_changed',
+      async (data) => {
+        try {
+          const payload = JSON.parse(data.payload);
+          const newState = payload.new_state as AgentState;
+          setAgentState(newState);
+          console.log('[SessionManager] Agent state changed:', newState);
+        } catch (error) {
+          console.error('[SessionManager] Failed to parse agent state RPC:', error);
+        }
+      }
+    );
+
+    return () => {
+      // Safely call unregister if it's a function
+      if (typeof unregister === 'function') {
+        unregister();
+      }
+    };
+  }, [localParticipant]);
+
   // Handle text chat messages (separate from voice transcriptions)
   useEffect(() => {
     chatMessages.forEach((msg) => {
@@ -249,6 +278,7 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
       ) : (
         <AvatarView
           lastMessage={avatarMessage}
+          agentState={agentState}
           onBack={handleBack}
         />
       )}

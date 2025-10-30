@@ -10,12 +10,15 @@ let firstUnityFrameTime: number | null = null;
 let lastUnityFrameTime: number | null = null;
 let unitySentCount = 0;
 
+type AgentState = 'initializing' | 'idle' | 'listening' | 'thinking' | 'speaking' | 'searching';
+
 interface AvatarViewProps {
   lastMessage?: ChatMessage;
+  agentState: AgentState | null;
   onBack: () => void;
 }
 
-export function AvatarView({ lastMessage, onBack }: AvatarViewProps) {
+export function AvatarView({ lastMessage, agentState, onBack }: AvatarViewProps) {
   const { unityProvider, isLoaded, loadingProgression, sendMessage, unload } = useUnityContext({
     loaderUrl: '/unity/Build/unity.loader.js',
     dataUrl: '/unity/Build/unity.data',
@@ -73,6 +76,20 @@ export function AvatarView({ lastMessage, onBack }: AvatarViewProps) {
       setIsMicEnabled(newState);
       console.log('[AvatarView] Microphone toggled:', newState);
     }
+  };
+
+  // Get status text based on priority
+  const getStatusText = () => {
+    if (!isLoaded) {
+      return '연결중';  // Highest priority: Unity loading
+    }
+    if (!isMicEnabled) {
+      return '음소거 되어있어요';  // 2nd priority: User muted
+    }
+    if (agentState === 'thinking') {
+      return '생각하고 있어요';  // 3rd priority: Agent thinking
+    }
+    return '궁금한 점을 물어보세요';  // Default
   };
 
   // Interrupt signal - immediate execution (bypasses queue)
@@ -276,7 +293,7 @@ export function AvatarView({ lastMessage, onBack }: AvatarViewProps) {
               lineHeight: '1.3',
             }}
           >
-            {isLoaded ? '궁금한 점을 물어보세요' : '연결중'}
+            {getStatusText()}
           </p>
 
           {/* 마이크 버튼 - 로딩 상태에 따라 변경 */}
