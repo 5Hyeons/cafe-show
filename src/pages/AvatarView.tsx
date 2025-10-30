@@ -78,18 +78,18 @@ export function AvatarView({ lastMessage, agentState, onBack }: AvatarViewProps)
     }
   };
 
-  // Get status text based on priority
+  // Get status text and animation state based on priority
   const getStatusText = () => {
     if (!isLoaded) {
-      return '연결중';  // Highest priority: Unity loading
+      return { text: '연결중', isThinking: false };  // Highest priority: Unity loading
     }
     if (!isMicEnabled) {
-      return '음소거 되어있어요';  // 2nd priority: User muted
+      return { text: '음소거 되어있어요', isThinking: false };  // 2nd priority: User muted
     }
     if (agentState === 'thinking') {
-      return '생각하고 있어요';  // 3rd priority: Agent thinking
+      return { text: '생각하고 있어요', isThinking: true };  // 3rd priority: Agent thinking (with animation)
     }
-    return '궁금한 점을 물어보세요';  // Default
+    return { text: '궁금한 점을 물어보세요', isThinking: false };  // Default
   };
 
   // Interrupt signal - immediate execution (bypasses queue)
@@ -279,22 +279,31 @@ export function AvatarView({ lastMessage, agentState, onBack }: AvatarViewProps)
             ✕
           </button>
 
-          {/* 중앙 텍스트 - 로딩 상태에 따라 변경 */}
-          <p
-            className="flex-1 text-center text-[16px]"
-            style={{
-              background: isLoaded
-                ? 'none'
-                : 'linear-gradient(90deg, #666666 0%, rgba(102,102,102,0.3) 100%)',
-              WebkitBackgroundClip: isLoaded ? 'unset' : 'text',
-              WebkitTextFillColor: isLoaded ? '#666666' : 'transparent',
-              color: isLoaded ? '#666666' : 'transparent',
-              letterSpacing: '-0.32px',
-              lineHeight: '1.3',
-            }}
-          >
-            {getStatusText()}
-          </p>
+          {/* 중앙 텍스트 - 로딩 상태 및 Agent 상태에 따라 변경 */}
+          {(() => {
+            const statusInfo = getStatusText();
+            return (
+              <p
+                className="flex-1 text-center text-[16px]"
+                style={{
+                  background: statusInfo.isThinking
+                    ? 'linear-gradient(90deg, rgba(102,102,102,0.3) 0%, #666666 25%, #666666 50%, rgba(102,102,102,0.3) 75%, rgba(102,102,102,0.3) 100%)'
+                    : isLoaded
+                    ? 'none'
+                    : 'linear-gradient(90deg, #666666 0%, rgba(102,102,102,0.3) 100%)',
+                  backgroundSize: statusInfo.isThinking ? '200% 100%' : '100% 100%',
+                  WebkitBackgroundClip: statusInfo.isThinking || !isLoaded ? 'text' : 'unset',
+                  WebkitTextFillColor: statusInfo.isThinking || !isLoaded ? 'transparent' : '#666666',
+                  color: isLoaded && !statusInfo.isThinking ? '#666666' : 'transparent',
+                  animation: statusInfo.isThinking ? 'gradient-flow 3s ease-in-out infinite' : 'none',
+                  letterSpacing: '-0.32px',
+                  lineHeight: '1.3',
+                }}
+              >
+                {statusInfo.text}
+              </p>
+            );
+          })()}
 
           {/* 마이크 버튼 - 로딩 상태에 따라 변경 */}
           <button
