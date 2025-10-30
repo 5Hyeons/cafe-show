@@ -19,7 +19,7 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [avatarMessage, setAvatarMessage] = useState<ChatMessage | undefined>(undefined);
   const [agentState, setAgentState] = useState<AgentState | null>(null);
-  const [detailTopic, setDetailTopic] = useState<string | null>(null);
+  const [pendingDetailTopic, setPendingDetailTopic] = useState<string | null>(null);
   const { chatMessages, send } = useChat();
   const { localParticipant } = useLocalParticipant();
   const room = useRoomContext();
@@ -30,6 +30,12 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
   useEffect(() => {
     currentScreenRef.current = currentScreen;
   }, [currentScreen]);
+
+  // Ref to track pending detail topic (avoid closure issue)
+  const pendingDetailTopicRef = useRef(pendingDetailTopic);
+  useEffect(() => {
+    pendingDetailTopicRef.current = pendingDetailTopic;
+  }, [pendingDetailTopic]);
 
   // Auto-resume AudioContext on user interaction (fix browser autoplay policy)
   useAudioContext();
@@ -111,12 +117,25 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
           setMessages((prev) => {
             const existingIndex = prev.findIndex(m => m.id === messageId);
 
+            // Determine detailTopic: use existing if updating, or pending if new Agent message
+            let detailTopicToUse: string | undefined;
+            if (existingIndex >= 0) {
+              // Preserve existing detailTopic
+              detailTopicToUse = prev[existingIndex].detailTopic;
+            } else if (!isUserTranscription && pendingDetailTopicRef.current) {
+              // Attach pending detail to new Agent message
+              detailTopicToUse = pendingDetailTopicRef.current;
+              setPendingDetailTopic(null);  // Consume pending
+              console.log('[SessionManager] Attached pending detail to new Agent message:', detailTopicToUse);
+            }
+
             const updatedMessage: ChatMessage = {
               id: messageId,
               message: fullText + (isFinal ? '' : ' ...'),
               isUser: isUserTranscription,
               timestamp: reader.info.timestamp || Date.now(),
               sender: isUserTranscription ? 'You' : 'Agent',
+              detailTopic: detailTopicToUse,
             };
 
             // Update avatarMessage if in AvatarView and this is an agent message
@@ -216,8 +235,12 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
         try {
           const payload = JSON.parse(data.payload);
           const topic = payload.topic;
-          setDetailTopic(topic);
-          console.log('[SessionManager] Showing event details for topic:', topic);
+
+          // Set as pending (will be attached to next Agent message)
+          setPendingDetailTopic(topic);
+          console.log('[SessionManager] Pending detail topic:', topic);
+
+          // Immediately return (prevent RPC timeout)
         } catch (error) {
           console.error('[SessionManager] Failed to parse detail RPC:', error);
         }
@@ -290,6 +313,15 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
     await send(text);
   }, [send]);
 
+  const handleClearDetail = useCallback((messageId: string) => {
+    setMessages(prev =>
+      prev.map(m =>
+        m.id === messageId ? { ...m, detailTopic: undefined } : m
+      )
+    );
+    console.log('[SessionManager] Cleared detail for message:', messageId);
+  }, []);
+
   // Event handler wrapper for screen navigation with optional interrupt
   const handleNextScreen = useCallback(async (shouldInterrupt: boolean = false) => {
     await notifyModeChange('avatar', shouldInterrupt);
@@ -322,8 +354,7 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
           messages={messages}
           onSendMessage={handleSendMessage}
           onNextScreen={handleNextScreen}
-          detailTopic={detailTopic}
-          onClearDetail={() => setDetailTopic(null)}
+          onClearDetail={handleClearDetail}
         />
       ) : (
         <AvatarView

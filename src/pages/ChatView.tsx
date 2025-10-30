@@ -9,11 +9,10 @@ interface ChatViewProps {
   messages: ChatMessage[];
   onSendMessage: (message: string) => void;
   onNextScreen?: (shouldInterrupt?: boolean) => void;
-  detailTopic?: string | null;
-  onClearDetail?: () => void;
+  onClearDetail?: (messageId: string) => void;
 }
 
-export function ChatView({ messages, onSendMessage, onNextScreen, detailTopic, onClearDetail }: ChatViewProps) {
+export function ChatView({ messages, onSendMessage, onNextScreen, onClearDetail }: ChatViewProps) {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -93,24 +92,29 @@ export function ChatView({ messages, onSendMessage, onNextScreen, detailTopic, o
           <TagButton variant="white">+</TagButton>
         </div>
 
-        {/* Chat Messages (Screen 2 style) */}
+        {/* Chat Messages with Details (Screen 2 style) */}
         {hasMessages && (
           <div className="mb-4">
             {messages.map((msg) => (
-              <ChatMessageItem key={msg.id} message={msg} />
+              <div key={msg.id}>
+                <ChatMessageItem message={msg} />
+
+                {/* Detail Content if attached to this message */}
+                {msg.detailTopic && (
+                  <>
+                    {/* Vector 3234 Divider */}
+                    <div className="w-full h-px bg-gray-300 my-1" />
+
+                    {/* Detail Content */}
+                    <DetailContent
+                      topic={msg.detailTopic}
+                      onClose={() => onClearDetail?.(msg.id)}
+                    />
+                  </>
+                )}
+              </div>
             ))}
             <div ref={messagesEndRef} />
-          </div>
-        )}
-
-        {/* Event Detail Section (when tool is called) */}
-        {detailTopic && (
-          <div className="w-full">
-            {/* Vector 3234 Divider */}
-            <div className="w-full h-px bg-gray-300 my-1" />
-
-            {/* Detail Content */}
-            <DetailContent topic={detailTopic} onClose={onClearDetail} />
           </div>
         )}
 

@@ -5,6 +5,7 @@ export interface ChatMessage {
   isUser: boolean;
   timestamp: number;
   sender?: string;
+  detailTopic?: string;
 }
 
 // Screen states
