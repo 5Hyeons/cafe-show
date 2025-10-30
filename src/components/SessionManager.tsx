@@ -19,6 +19,7 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [avatarMessage, setAvatarMessage] = useState<ChatMessage | undefined>(undefined);
   const [agentState, setAgentState] = useState<AgentState | null>(null);
+  const [detailTopic, setDetailTopic] = useState<string | null>(null);
   const { chatMessages, send } = useChat();
   const { localParticipant } = useLocalParticipant();
   const room = useRoomContext();
@@ -140,10 +141,17 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
           const existingIndex = prev.findIndex(m => m.id === messageId);
           if (existingIndex >= 0) {
             const newMessages = [...prev];
-            newMessages[existingIndex] = {
+            const finalMessage = {
               ...newMessages[existingIndex],
               message: fullText, // Remove "..." regardless of isFinal
             };
+            newMessages[existingIndex] = finalMessage;
+
+            // Also update avatarMessage if in AvatarView and this is agent message
+            if (currentScreenRef.current === 'avatar' && !isUserTranscription) {
+              setAvatarMessage(finalMessage);
+            }
+
             return newMessages;
           }
           return prev;
@@ -198,6 +206,31 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
     };
   }, [localParticipant]);
 
+  // Register RPC handler for event detail display
+  useEffect(() => {
+    if (!localParticipant) return;
+
+    const unregister = localParticipant.registerRpcMethod(
+      'show_event_details',
+      async (data) => {
+        try {
+          const payload = JSON.parse(data.payload);
+          const topic = payload.topic;
+          setDetailTopic(topic);
+          console.log('[SessionManager] Showing event details for topic:', topic);
+        } catch (error) {
+          console.error('[SessionManager] Failed to parse detail RPC:', error);
+        }
+      }
+    );
+
+    return () => {
+      if (typeof unregister === 'function') {
+        unregister();
+      }
+    };
+  }, [localParticipant]);
+
   // Handle text chat messages (separate from voice transcriptions)
   useEffect(() => {
     chatMessages.forEach((msg) => {
@@ -224,26 +257,29 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
     });
   }, [chatMessages, localParticipant.identity]);
 
-  // RPC method call to interrupt agent
-  const interruptAgent = useCallback(async () => {
+  // RPC method call to notify agent of mode change
+  const notifyModeChange = useCallback(async (mode: 'chat' | 'avatar', shouldInterrupt: boolean = false) => {
     try {
       const agentParticipant = Array.from(room.remoteParticipants.values())
         .find(p => p.identity.startsWith('agent'));
 
       if (!agentParticipant) {
-        console.warn('Agent participant not found for interrupt RPC');
+        console.warn('Agent participant not found for mode change RPC');
         return;
       }
 
       await localParticipant.performRpc({
         destinationIdentity: agentParticipant.identity,
-        method: 'interrupt_agent',
-        payload: '',
+        method: 'user_mode_changed',
+        payload: JSON.stringify({
+          mode: mode,
+          should_interrupt: shouldInterrupt
+        }),
       });
 
-      console.log('Agent interrupted via RPC');
+      console.log('[SessionManager] Mode changed via RPC:', mode);
     } catch (error) {
-      console.error('Failed to interrupt agent:', error);
+      console.error('[SessionManager] Failed to send mode change RPC:', error);
     }
   }, [room, localParticipant]);
 
@@ -256,18 +292,16 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
 
   // Event handler wrapper for screen navigation with optional interrupt
   const handleNextScreen = useCallback(async (shouldInterrupt: boolean = false) => {
-    if (shouldInterrupt) {
-      await interruptAgent();
-    }
+    await notifyModeChange('avatar', shouldInterrupt);
     setAvatarMessage(undefined);  // Reset to show initial greeting when entering AvatarView
     onNextScreen?.();
-  }, [interruptAgent, onNextScreen]);
+  }, [notifyModeChange, onNextScreen]);
 
   // Event handler wrapper for back navigation (always interrupt agent)
   const handleBack = useCallback(async () => {
-    await interruptAgent();
+    await notifyModeChange('chat', true);
     onBack?.();
-  }, [interruptAgent, onBack]);
+  }, [notifyModeChange, onBack]);
 
   return (
     <>
@@ -288,6 +322,8 @@ export function SessionManager({ currentScreen, onNextScreen, onBack }: SessionM
           messages={messages}
           onSendMessage={handleSendMessage}
           onNextScreen={handleNextScreen}
+          detailTopic={detailTopic}
+          onClearDetail={() => setDetailTopic(null)}
         />
       ) : (
         <AvatarView

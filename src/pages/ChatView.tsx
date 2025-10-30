@@ -2,15 +2,18 @@ import { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import { Header } from '../components/common/Header';
 import { TagButton } from '../components/common/TagButton';
 import { ChatMessageItem } from '../components/chat/ChatMessageItem';
+import { DetailContent } from '../components/DetailContent';
 import { ChatMessage } from '../types';
 
 interface ChatViewProps {
   messages: ChatMessage[];
   onSendMessage: (message: string) => void;
   onNextScreen?: (shouldInterrupt?: boolean) => void;
+  detailTopic?: string | null;
+  onClearDetail?: () => void;
 }
 
-export function ChatView({ messages, onSendMessage, onNextScreen }: ChatViewProps) {
+export function ChatView({ messages, onSendMessage, onNextScreen, detailTopic, onClearDetail }: ChatViewProps) {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -97,6 +100,17 @@ export function ChatView({ messages, onSendMessage, onNextScreen }: ChatViewProp
               <ChatMessageItem key={msg.id} message={msg} />
             ))}
             <div ref={messagesEndRef} />
+          </div>
+        )}
+
+        {/* Event Detail Section (when tool is called) */}
+        {detailTopic && (
+          <div className="w-full">
+            {/* Vector 3234 Divider */}
+            <div className="w-full h-px bg-gray-300 my-1" />
+
+            {/* Detail Content */}
+            <DetailContent topic={detailTopic} onClose={onClearDetail} />
           </div>
         )}
 

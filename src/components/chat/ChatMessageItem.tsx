@@ -18,7 +18,7 @@ export function ChatMessageItem({ message }: ChatMessageItemProps) {
 
   // Agent message: no border, just text (Figma Screen 2 style)
   return (
-    <div className="flex justify-start mb-4 px-5">
+    <div className="flex justify-start mb-1 px-5">
       <div className="max-w-[70%]">
         {message.sender && message.sender !== 'Agent' && (
           <p className="text-xs text-cafeshow-gray-300 mb-1">{message.sender}</p>
