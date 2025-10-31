@@ -9,12 +9,16 @@ CafeShow 행사를 위한 AI 아바타 안내 시스템입니다. 텍스트 채�
 - 빠른 질의응답 태그 버튼
 - 대화 내역 실시간 표시
 - User/Agent 메시지 구분 표시
+- **동적 버튼**: 입력 상태에 따라 전송/아바타 모드 자동 전환
+- **상세 정보 표시**: Agent tool 호출 시 MD 형식 상세 내용 표시
 
 ### 🎭 음성 아바타 대화 (AvatarView)
 - Unity WebGL 3D 아바타
 - 실시간 음성 인식 및 응답
 - **완벽한 립싱크** (20fps 애니메이션)
 - 마이크 on/off 토글
+- **동적 상태 문구**: Agent 상태에 따라 변경 (그라데이션 애니메이션 포함)
+- **볼륨 시각화**: 마이크 입력에 반응하는 그라데이션 효과
 
 ### 🎨 디자인
 - Figma 디자인 100% 구현
@@ -89,11 +93,18 @@ Timeline 재생 (20fps, 완벽한 싱크!)
 
 ### 1. 환경 변수 설정
 
-`.env` 파일 생성:
+`.env` 파일 생성 (`.env.example` 참고):
 
 ```bash
-VITE_TOKEN_SERVER_URL=http://61.14.209.9:8037
-VITE_LIVEKIT_SERVER_URL=wss://your-livekit-server.livekit.cloud
+# LiveKit API Credentials (Serverless Function용)
+LIVEKIT_API_KEY=your-api-key
+LIVEKIT_API_SECRET=your-api-secret
+
+# Token Server URL
+VITE_TOKEN_SERVER_URL=/api/token
+
+# LiveKit Server
+VITE_LIVEKIT_SERVER_URL=wss://your-project.livekit.cloud
 VITE_ROOM_PREFIX=cafe-show
 ```
 
@@ -117,6 +128,12 @@ public/unity/Build/
 
 ### 4. 개발 서버 실행
 
+**Vercel Dev (추천 - Serverless Function 포함):**
+```bash
+vercel dev
+```
+
+**일반 Dev (Serverless Function 없음):**
 ```bash
 npm run dev
 ```
@@ -125,36 +142,71 @@ npm run dev
 
 ---
 
+## 🌐 배포 (Vercel)
+
+### 환경 변수 설정
+
+Vercel Dashboard → Settings → Environment Variables:
+```
+LIVEKIT_API_KEY
+LIVEKIT_API_SECRET
+VITE_TOKEN_SERVER_URL=/api/token
+VITE_LIVEKIT_SERVER_URL=wss://...
+VITE_ROOM_PREFIX=cafe-show
+```
+
+### 배포
+
+```bash
+vercel --prod
+```
+
+**주의:** Git 자동 배포는 비활성화 권장 (Unity 대용량 파일 문제)
+
+---
+
 ## 📁 프로젝트 구조
 
 ```
 cafe-show/
+├── api/
+│   └── token.ts                       # Vercel Serverless Function (토큰 생성)
 ├── public/
-│   ├── assets/              # Figma 에셋 (로고, 아이콘, 이미지)
-│   └── unity/               # Unity WebGL 빌드
-│       ├── Build/
-│       └── TemplateData/
+│   ├── assets/                        # Figma 에셋
+│   ├── content/                       # MD 상세 정보 (신규)
+│   │   ├── forum.md
+│   │   ├── ticket.md
+│   │   ├── hall.md
+│   │   ├── transportation.md
+│   │   └── program.md
+│   └── unity/                         # Unity WebGL 빌드
+│       └── Build/
 ├── src/
 │   ├── components/
 │   │   ├── chat/
-│   │   │   └── ChatMessageItem.tsx    # 메시지 아이템
+│   │   │   └── ChatMessageItem.tsx
 │   │   ├── common/
-│   │   │   ├── Header.tsx             # 공통 헤더
-│   │   │   └── TagButton.tsx          # 태그 버튼
+│   │   │   ├── Header.tsx
+│   │   │   └── TagButton.tsx
+│   │   ├── DetailContent.tsx          # MD 렌더링 (신규)
 │   │   └── SessionManager.tsx         # LiveKit 세션 관리
 │   ├── hooks/
-│   │   ├── useAnimationData.ts        # 애니메이션 데이터 수신 & 큐잉
-│   │   ├── useAudioContext.ts         # 브라우저 오디오 정책 우회
-│   │   └── useLiveKit.ts              # LiveKit 연결
+│   │   ├── useAnimationData.ts
+│   │   ├── useAudioContext.ts
+│   │   ├── useLiveKit.ts
+│   │   └── useTrackVolume.ts          # 볼륨 감지 (신규)
+│   ├── lib/
+│   │   └── livekit.ts                 # Token 생성 유틸
 │   ├── pages/
-│   │   ├── ChatView.tsx               # 텍스트 채팅 화면
-│   │   └── AvatarView.tsx             # 음성 아바타 화면
+│   │   ├── ChatView.tsx
+│   │   └── AvatarView.tsx
 │   ├── types/
-│   │   └── index.ts                   # TypeScript 타입
-│   ├── App.tsx                        # 앱 진입점
-│   ├── main.tsx                       # React 렌더링
-│   └── index.css                      # 전역 스타일
-└── tailwind.config.js                 # Tailwind 설정
+│   │   └── index.ts
+│   ├── App.tsx
+│   ├── main.tsx
+│   └── index.css
+├── vercel.json                        # Vercel 설정 (신규)
+└── tailwind.config.js
 ```
 
 ---
@@ -175,6 +227,15 @@ cafe-show/
 - `segmentId` 기반 메시지 중복 제거
 - Final signal 처리 (순서 보장)
 - Interrupt signal 처리 (즉시 실행)
+
+**RPC 통신 (2025-10-31):**
+- `agent_state_changed` 수신: Agent 상태 → UI 업데이트
+- `show_event_details` 수신: Tool 호출 → MD 표시 (pending 방식)
+- `user_mode_changed` 전송: 모드 변경 → Agent에 알림
+
+**클로저 문제 해결:**
+- `useRef`로 최신 상태 참조 (currentScreenRef, pendingDetailTopicRef)
+- useEffect 의존성 배열에 없어도 정상 작동
 
 ---
 

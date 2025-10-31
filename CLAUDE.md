@@ -22,8 +22,11 @@
 
 **SessionManager (Container - 비즈니스 로직):**
 - LiveKit 연결 관리
-- State 관리 (messages)
+- State 관리 (messages, agentState, avatarMessage)
 - 오디오/텍스트 스트림 처리
+- RPC 핸들러 등록 (agent_state_changed, show_event_details, user_mode_changed)
+- 마이크 볼륨 감지 (useTrackVolume)
+- 사용자 모드 추적 (chat/avatar)
 
 **ChatView & AvatarView (Presentation - UI):**
 - UI 렌더링만 담당
@@ -67,6 +70,18 @@ SessionManager (비즈니스 로직)
 - `segmentId`로 메시지 중복 제거
 - Final/Interrupt 신호 처리
 - ChatView에서 마이크 비활성화
+- **useRef를 통한 클로저 문제 해결** (currentScreenRef, pendingDetailTopicRef)
+
+**RPC 통신:**
+- `agent_state_changed`: Agent 상태 수신 (listening/thinking/speaking)
+- `show_event_details`: 상세 정보 표시 요청 수신 (pending 방식)
+- `user_mode_changed`: 사용자 모드 변경 알림 전송 (chat/avatar)
+
+**새로운 기능 (2025-10-31):**
+- Agent 상태 기반 동적 UI (agentState)
+- 마이크 볼륨 감지 및 시각화 (useTrackVolume)
+- AvatarView 초기 인사말 관리 (avatarMessage)
+- 상세 정보 표시 (detailTopic → ChatMessage)
 
 **하지 말아야 할 것:**
 - UI 렌더링 추가 (ChatView/AvatarView에 위임)
@@ -85,9 +100,15 @@ SessionManager (비즈니스 로직)
 - 아바타 툴팁 (메시지 없을 때)
 
 **Props:**
-- `messages: ChatMessage[]` - SessionManager에서 받음
+- `messages: ChatMessage[]` - SessionManager에서 받음 (detailTopic 포함)
 - `onSendMessage: (text: string) => void` - SessionManager 콜백
-- `onNextScreen?: () => void` - AvatarView로 이동
+- `onNextScreen?: (shouldInterrupt?: boolean) => void` - AvatarView로 이동
+- `onClearDetail?: (messageId: string) => void` - 상세 정보 닫기
+
+**새로운 기능 (2025-10-31):**
+- **동적 버튼**: 텍스트 입력 시 전송 버튼, 비어있을 때 아바타 모드 버튼
+- **상세 정보 표시**: Agent 메시지에 MD 형식 상세 내용 붙이기 (react-markdown)
+- **메시지별 detail 관리**: 각 Agent 답변 아래 해당 detail 표시
 
 **스타일:**
 - 고정 높이 컨테이너 (`h-screen`)
@@ -108,7 +129,9 @@ SessionManager (비즈니스 로직)
 - 커스텀 로딩 화면
 
 **Props:**
-- `lastMessage?: ChatMessage` - SessionManager에서 받음
+- `lastMessage?: ChatMessage` - SessionManager에서 받음 (AvatarView 진입 시 초기화)
+- `agentState: AgentState | null` - Agent 상태 (listening/thinking/speaking)
+- `userVolume: number` - 사용자 마이크 볼륨 (0-1)
 - `onBack: () => void` - ChatView로 돌아가기
 
 **주요 기능:**
@@ -116,6 +139,15 @@ SessionManager (비즈니스 로직)
 - 하단 정렬 Unity 캔버스
 - 원형 아바타 로딩 오버레이
 - 마이크 on/off 토글 (80×80px 버튼)
+
+**새로운 기능 (2025-10-31):**
+- **동적 상태 문구**: Agent state 및 음소거 상태에 따라 변경
+  - 연결중: "연결중" (정적)
+  - 음소거: "음소거 되어있어요"
+  - Thinking: "생각하고 있어요" (그라데이션 애니메이션)
+  - 기본: "궁금한 점을 물어보세요"
+- **볼륨 기반 그라데이션**: 마이크 볼륨에 따라 하단 빨간 그라데이션 투명도 변화
+- **초기 인사말 관리**: AvatarView 진입 시 항상 초기 인사말 표시
 
 **Unity 통합:**
 - 애니메이션 데이터: `sendMessage('ReactBridge', 'OnAnimationData', frameString)`
@@ -149,6 +181,41 @@ SessionManager (비즈니스 로직)
 - 첫 사용자 인터랙션 시 AudioContext 재개
 - click, touch, keydown 이벤트 리스닝
 - Agent 오디오 재생에 필수
+
+---
+
+### `/src/hooks/useTrackVolume.ts` (신규 2025-10-31)
+
+**목적:** LiveKit Track의 실시간 오디오 볼륨 감지
+
+**기능:**
+- Web Audio API (AudioContext + AnalyserNode)
+- RMS 계산으로 볼륨 정규화 (0-1)
+- 30 FPS 업데이트
+- MediaStream 기반 분석
+
+**사용처:**
+- SessionManager: 사용자 마이크 볼륨 감지
+- AvatarView: 볼륨 기반 시각적 피드백
+
+---
+
+### `/src/components/DetailContent.tsx` (신규 2025-10-31)
+
+**목적:** MD 형식 상세 정보 렌더링
+
+**기능:**
+- `/content/{topic}.md` 파일 fetch
+- react-markdown으로 렌더링
+- 볼드, 리스트, 줄바꿈 등 MD 구문 지원
+- 닫기 버튼 (선택)
+
+**데이터:**
+- `forum.md` - 월드커피리더스포럼
+- `ticket.md` - 티켓 정보
+- `hall.md` - 홀별 소개
+- `transportation.md` - 교통 안내
+- `program.md` - 주요 프로그램
 
 ---
 
@@ -291,15 +358,134 @@ maxWidth: {
 
 ---
 
+## 신규 기능 (2025-10-31)
+
+### 1. 동적 UI 시스템
+
+**동적 버튼 (ChatView):**
+- 텍스트 입력 중: 전송 아이콘 + 전송 기능
+- 텍스트 비어있음: 아바타 모드 아이콘 + 화면 전환 + Agent interrupt
+
+**동적 상태 문구 (AvatarView):**
+- Agent state 기반 문구 변경
+- "생각하고 있어요" 그라데이션 애니메이션 (linear, 끊김 없음)
+- 음소거 상태 감지
+
+---
+
+### 2. Agent 상태 관리
+
+**RPC 기반 양방향 통신:**
+- React → Agent: `user_mode_changed` (chat/avatar 모드 알림)
+- Agent → React: `agent_state_changed` (thinking/listening/speaking)
+
+**사용자 모드 추적:**
+- ChatView: `current_mode = 'chat'` → function_tool 활성화
+- AvatarView: `current_mode = 'avatar'` → function_tool 비활성화, 상세 답변
+
+**클로저 문제 해결:**
+- `useRef` 패턴으로 최신 상태 참조 (currentScreenRef, pendingDetailTopicRef)
+
+---
+
+### 3. 키워드 기반 상세 정보 표시 (ChatView 전용)
+
+**Agent function_tool:**
+- `@function_tool() show_event_details(topic)`
+- OpenAI Realtime API 최적화 (불릿, 대문자 강조)
+- Tool preamble: "자세한 정보를 보여드릴게요"
+
+**동작 흐름:**
+```
+사용자: "포럼 있나요?"
+    ↓
+Agent: "네, 월드커피리더스포럼이 열립니다. 자세한 정보를 보여드릴게요."
+    ↓
+RPC: show_event_details(topic="forum")
+    ↓
+React: Pending 저장 → 다음 Agent 메시지에 detailTopic 붙이기
+    ↓
+ChatView: Agent 답변 + 구분선 + MD 상세 내용
+```
+
+**Pending 방식:**
+- RPC 즉시 응답 (timeout 방지)
+- 다음 Agent Transcription에 자동 연결
+- 각 메시지별로 detail 누적 표시
+
+---
+
+### 4. 마이크 볼륨 시각화
+
+**useTrackVolume 훅:**
+- Web Audio API (AnalyserNode)
+- RMS 계산으로 0-1 정규화
+- 30 FPS 업데이트
+
+**시각적 피드백 (AvatarView):**
+- 하단 빨간 그라데이션 (550px 고정 높이)
+- 볼륨에 따라 opacity 변화 (0-1)
+- `transition: opacity 0.1s` 부드러운 전환
+
+---
+
+### 5. CSS 애니메이션
+
+**그라데이션 애니메이션 (`index.css`):**
+```css
+@keyframes gradient-flow {
+  0% { background-position: 100% 50%; }
+  100% { background-position: -100% 50%; }
+}
+```
+
+**적용:**
+- "생각하고 있어요" 텍스트
+- 왼쪽 → 오른쪽 흐르는 효과
+- 4s linear infinite
+
+---
+
+## 배포 (Vercel)
+
+### Vercel Serverless Function
+
+**Token 생성:**
+- `api/token.ts` - LiveKit JWT 생성
+- Mixed Content 문제 해결 (HTTPS)
+- livekit-server-sdk 사용
+
+**환경 변수 (Vercel Dashboard):**
+```
+LIVEKIT_API_KEY=APIAEqsG454pxax
+LIVEKIT_API_SECRET=heKLTjXqLal0ML3yU1Z849wV5kxxFfo87vhpeHiozmfB
+VITE_TOKEN_SERVER_URL=/api/token
+VITE_LIVEKIT_SERVER_URL=wss://mirabel-2j47mr85.livekit.cloud
+VITE_ROOM_PREFIX=cafe-show
+```
+
+**배포 방식:**
+- Git 자동 배포 비활성화 (Unity 파일 문제)
+- `vercel --prod` 수동 배포 (CLI)
+
+**로컬 테스트:**
+```bash
+vercel dev  # Serverless Function 포함
+```
+
+---
 
 ## 관련 프로젝트
 
-- **talkmotion-sdk** @../talkmotion-sdk : ServerMode.NoServer 구현 
+- **talkmotion-sdk** @../talkmotion-sdk : ServerMode.NoServer 구현
 - **cafe-show-unity-webgl** @../cafe-show-unity-webgl : Unity WebGL 빌드 소스
-- **livekit-agents** @../livekit-agents : STF(Speech-to-Face) 포함 Agent 서버
+- **livekit-agents** @../livekit-agents :
+  - CafeShow Agent (`core/cafe_show_agent.py`)
+  - 카페쇼 페르소나 (`config/personas.py`)
+  - RPC handlers (`handlers/rpc_handlers.py`)
 
 ---
 
 
-**업데이트:** 2025-10-30
-**상태:** ✅ 립싱크 완성, UI 완료, 문서화 완료
+**업데이트:** 2025-10-31
+**상태:** ✅ 동적 UI, Agent 상태 관리, 상세 정보 표시, 볼륨 시각화, Vercel 배포 완료
